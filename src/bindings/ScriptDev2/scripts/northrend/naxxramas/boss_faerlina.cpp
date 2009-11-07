@@ -22,56 +22,70 @@ SDCategory: Naxxramas
 EndScriptData */
 
 #include "precompiled.h"
-#include "naxxramas.h"
+#include "def_naxxramas.h"
 
-enum
-{
-    SAY_GREET                 = -1533009,
-    SAY_AGGRO1                = -1533010,
-    SAY_AGGRO2                = -1533011,
-    SAY_AGGRO3                = -1533012,
-    SAY_AGGRO4                = -1533013,
-    SAY_SLAY1                 = -1533014,
-    SAY_SLAY2                 = -1533015,
-    SAY_DEATH                 = -1533016,
+#define SAY_GREET                   -1533009
+#define SAY_AGGRO1                  -1533010
+#define SAY_AGGRO2                  -1533011
+#define SAY_AGGRO3                  -1533012
+#define SAY_AGGRO4                  -1533013
+#define SAY_SLAY1                   -1533014
+#define SAY_SLAY2                   -1533015
+#define SAY_DEATH                   -1533016
 
-    //SOUND_RANDOM_AGGRO        = 8955,                              //soundId containing the 4 aggro sounds, we not using this
+//#define SOUND_RANDOM_AGGRO  8955                            //soundId containing the 4 aggro sounds, we not using this
 
-    SPELL_POSIONBOLT_VOLLEY   = 28796,
-    H_SPELL_POSIONBOLT_VOLLEY = 54098,
-    SPELL_ENRAGE              = 28798,
-    H_SPELL_ENRAGE            = 54100,
+#define SPELL_POSIONBOLT_VOLLEY     28796
+#define H_SPELL_POSIONBOLT_VOLLEY   54098
+#define SPELL_ENRAGE                28798
+#define H_SPELL_ENRAGE              54100
 
-    SPELL_RAINOFFIRE          = 28794                       //Not sure if targeted AoEs work if casted directly upon a pPlayer
-};
+#define SPELL_FIREBALL              54095
+#define SPELL_FIREBALL_H            54096
+#define SPELL_WIDOWS_EMBRACE        28732
+
+#define SPELL_RAINOFFIRE            28794                   //Not sure if targeted AoEs work if casted directly upon a pPlayer
+
 struct MANGOS_DLL_DECL boss_faerlinaAI : public ScriptedAI
 {
     boss_faerlinaAI(Creature* pCreature) : ScriptedAI(pCreature)
     {
         m_pInstance = (ScriptedInstance*)pCreature->GetInstanceData();
         m_bIsHeroicMode = pCreature->GetMap()->IsHeroic();
-        m_bHasTaunted = false;
         Reset();
     }
 
     ScriptedInstance* m_pInstance;
     bool m_bIsHeroicMode;
 
-    uint32 m_uiPoisonBoltVolleyTimer;
-    uint32 m_uiRainOfFireTimer;
-    uint32 m_uiEnrageTimer;
-    bool   m_bHasTaunted;
+    uint32 PoisonBoltVolley_Timer;
+    uint32 RainOfFire_Timer;
+    uint32 Enrage_Timer;
+    bool HasTaunted;
 
     void Reset()
     {
-        m_uiPoisonBoltVolleyTimer = 8000;
-        m_uiRainOfFireTimer = 16000;
-        m_uiEnrageTimer = 60000;
+        PoisonBoltVolley_Timer = 8000;
+        RainOfFire_Timer = 16000;
+        Enrage_Timer = 60000;
+        HasTaunted = false;
+
+        std::list<Creature*> lUnitList;
+        GetCreatureListWithEntryInGrid(lUnitList, m_creature, 16506, 100.0f);
+        if (!lUnitList.empty())
+        {
+            for(std::list<Creature*>::iterator iter = lUnitList.begin(); iter != lUnitList.end(); ++iter)
+                if ((*iter)->isDead())
+                    (*iter)->Respawn();
+        }
+
+        if (m_pInstance)
+            m_pInstance->SetData(TYPE_FAERLINA, NOT_STARTED);
     }
 
-    void Aggro(Unit* pWho)
+    void Aggro(Unit *who)
     {
-        switch(urand(0, 3))
+        switch (rand()%4)
         {
             case 0: DoScriptText(SAY_AGGRO1, m_creature); break;
             case 1: DoScriptText(SAY_AGGRO2, m_creature); break;
@@ -83,23 +97,27 @@ struct MANGOS_DLL_DECL boss_faerlinaAI : public ScriptedAI
             m_pInstance->SetData(TYPE_FAERLINA, IN_PROGRESS);
     }
 
-    void MoveInLineOfSight(Unit* pWho)
+    void MoveInLineOfSight(Unit *who)
     {
-        if (!m_bHasTaunted && m_creature->IsWithinDistInMap(pWho, 60.0f))
+        if (!HasTaunted && m_creature->IsWithinDistInMap(who, 60.0f))
         {
             DoScriptText(SAY_GREET, m_creature);
-            m_bHasTaunted = true;
+            HasTaunted = true;
         }
 
-        ScriptedAI::MoveInLineOfSight(pWho);
+        ScriptedAI::MoveInLineOfSight(who);
     }
 
-    void KilledUnit(Unit* pVictim)
+    void KilledUnit(Unit* victim)
     {
-        DoScriptText(urand(0, 1)?SAY_SLAY1:SAY_SLAY2, m_creature);
+        switch (rand()%2)
+        {
+            case 0: DoScriptText(SAY_SLAY1, m_creature); break;
+            case 1: DoScriptText(SAY_SLAY2, m_creature); break;
+        }
     }
 
-    void JustDied(Unit* pKiller)
+    void JustDied(Unit* Killer)
     {
         DoScriptText(SAY_DEATH, m_creature);
 
@@ -107,43 +125,120 @@ struct MANGOS_DLL_DECL boss_faerlinaAI : public ScriptedAI
             m_pInstance->SetData(TYPE_FAERLINA, DONE);
     }
 
-    void UpdateAI(const uint32 uiDiff)
+    void UpdateAI(const uint32 diff)
     {
         if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
             return;
 
-        // Poison Bolt Volley
-        if (m_uiPoisonBoltVolleyTimer < uiDiff)
+        //PoisonBoltVolley_Timer
+        if (PoisonBoltVolley_Timer < diff)
         {
-            DoCast(m_creature->getVictim(), SPELL_POSIONBOLT_VOLLEY);
-            m_uiPoisonBoltVolleyTimer = 11000;
-        }
-        else
-            m_uiPoisonBoltVolleyTimer -= uiDiff;
+            DoCast(m_creature->getVictim(), m_bIsHeroicMode ? H_SPELL_POSIONBOLT_VOLLEY : SPELL_POSIONBOLT_VOLLEY);
+            PoisonBoltVolley_Timer = 9000 + rand()%2000;
+        }else PoisonBoltVolley_Timer -= diff;
 
-        // Rain Of Fire
-        if (m_uiRainOfFireTimer < uiDiff)
+        //RainOfFire_Timer
+        if (RainOfFire_Timer < diff)
         {
-            if (Unit* pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0))
-                DoCast(pTarget, SPELL_RAINOFFIRE);
+            if (Unit* target = SelectUnit(SELECT_TARGET_RANDOM,0))
+                DoCast(target,SPELL_RAINOFFIRE);
 
-            m_uiRainOfFireTimer = 16000;
-        }
-        else
-            m_uiRainOfFireTimer -= uiDiff;
+            RainOfFire_Timer = 14000 + rand()%2000;
+        }else RainOfFire_Timer -= diff;
 
         //Enrage_Timer
-        if (m_uiEnrageTimer < uiDiff)
+        if (Enrage_Timer < diff)
         {
-            DoCast(m_creature, SPELL_ENRAGE);
-            m_uiEnrageTimer = 61000;
-        }
-        else 
-            m_uiEnrageTimer -= uiDiff;
+            DoCast(m_creature, m_bIsHeroicMode ? H_SPELL_ENRAGE : SPELL_ENRAGE);
+            Enrage_Timer = 60000 + rand()%20000;
+        }else Enrage_Timer -= diff;
 
         DoMeleeAttackIfReady();
     }
 };
+
+struct MANGOS_DLL_DECL mob_worshippersAI : public ScriptedAI
+{
+    mob_worshippersAI(Creature* pCreature) : ScriptedAI(pCreature)
+    {
+        m_pInstance = (ScriptedInstance*)pCreature->GetInstanceData();
+        m_bIsHeroicMode = pCreature->GetMap()->IsHeroic();
+        Reset();
+    }
+
+    ScriptedInstance* m_pInstance;
+    bool m_bIsHeroicMode;
+    bool m_bIsDead;
+
+    uint32 m_uiFireball_Timer;
+    uint32 m_uiDeathDelay_Timer;
+
+    void Reset()
+    {
+        m_bIsDead = false;
+        m_uiFireball_Timer = 0;
+        m_uiDeathDelay_Timer = 0;
+    }
+
+    void DamageTaken(Unit* pDoneBy, uint32 &uiDamage)
+    {
+        if (m_bIsDead)
+        {
+            uiDamage = 0;
+            return;
+        }
+
+        if (uiDamage > m_creature->GetHealth())
+        {
+            if (m_creature->IsNonMeleeSpellCasted(false))
+                m_creature->InterruptNonMeleeSpells(false);
+
+            m_creature->RemoveAllAuras();
+            m_creature->AttackStop();
+
+            DoCast(m_creature, SPELL_WIDOWS_EMBRACE);
+
+            if (m_pInstance)
+                if (Creature* pFaerlina = ((Creature*)Unit::GetUnit((*m_creature), m_pInstance->GetData64(DATA_FAERLINA))))
+                    if (m_creature->GetDistance2d(pFaerlina) <= 5 && pFaerlina->HasAura(m_bIsHeroicMode ? H_SPELL_ENRAGE : SPELL_ENRAGE))
+                        pFaerlina->RemoveAurasDueToSpell(m_bIsHeroicMode ? H_SPELL_ENRAGE : SPELL_ENRAGE);
+
+            m_bIsDead = true;
+            m_uiDeathDelay_Timer = 500;
+
+            uiDamage = 0;
+            return;
+        }
+    }
+
+    void UpdateAI(const uint32 uiDiff)
+    {
+        if (m_uiDeathDelay_Timer)
+            if (m_uiDeathDelay_Timer < uiDiff)
+            {
+                m_creature->DealDamage(m_creature, m_creature->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+                m_uiDeathDelay_Timer = 0;
+            }
+            else m_uiDeathDelay_Timer -= uiDiff;
+
+        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim() || m_bIsDead)
+            return;
+
+        if (m_uiFireball_Timer < uiDiff)
+        {
+            DoCast(m_creature->getVictim(), m_bIsHeroicMode ? SPELL_FIREBALL_H : SPELL_FIREBALL);
+            m_uiFireball_Timer = 7000 + rand()%4000;
+        }
+        else m_uiFireball_Timer -= uiDiff;
+
+        DoMeleeAttackIfReady();
+    }
+};
+
+CreatureAI* GetAI_mob_worshippers(Creature* pCreature)
+{
+    return new mob_worshippersAI(pCreature);
+}
 
 CreatureAI* GetAI_boss_faerlina(Creature* pCreature)
 {
@@ -152,9 +247,14 @@ CreatureAI* GetAI_boss_faerlina(Creature* pCreature)
 
 void AddSC_boss_faerlina()
 {
-    Script* NewScript;
-    NewScript = new Script;
-    NewScript->Name = "boss_faerlina";
-    NewScript->GetAI = &GetAI_boss_faerlina;
-    NewScript->RegisterSelf();
+    Script *newscript;
+    newscript = new Script;
+    newscript->Name = "boss_faerlina";
+    newscript->GetAI = &GetAI_boss_faerlina;
+    newscript->RegisterSelf();
+
+    newscript = new Script;
+    newscript->Name = "mob_worshippers";
+    newscript->GetAI = &GetAI_mob_worshippers;
+    newscript->RegisterSelf();
 }

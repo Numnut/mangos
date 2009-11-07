@@ -6,14 +6,28 @@
 
 //battlegrounds
 extern void AddSC_battleground();
-
+/*
 //custom
+extern void AddSC_custom_example();
+//extern void AddSC_custom_gossip_codebox();
+extern void AddSC_test();
+extern void AddSC_custom_stone();*/
+
+//ToC
+extern void AddSC_AddSC_instance_trial_of_the_crusader();
+extern void AddSC_AddSC_gormok_the_impaler();
+extern void AddSC_AddSC_the_two_jormungar();
+
+//special
+extern void AddSC_AddSC_donationscript();
+extern void AddSC_AddSC_telstone();
 
 //examples
 extern void AddSC_example_creature();
 extern void AddSC_example_escort();
 extern void AddSC_example_gossip_codebox();
 extern void AddSC_example_misc();
+
 
 //world
 extern void AddSC_areatrigger_scripts();
@@ -390,10 +404,26 @@ extern void AddSC_zangarmarsh();
 
 void AddScripts()
 {
+
     //battlegrounds
     AddSC_battleground();
 
-    //custom
+   /*         //custom
+    AddSC_custom_example();
+   // AddSC_custom_gossip_codebox();
+    AddSC_test();
+    AddSC_custom_stone();
+*/
+
+
+	//ToC
+	 AddSC_AddSC_instance_trial_of_the_crusader();
+	AddSC_AddSC_gormok_the_impaler();
+ 	AddSC_AddSC_the_two_jormungar();
+
+	//special
+ 	AddSC_AddSC_donationscript();
+ 	AddSC_AddSC_telstone();
 
     //examples
     AddSC_example_creature();

@@ -22,7 +22,7 @@ SDCategory: Naxxramas
 EndScriptData */
 
 #include "precompiled.h"
-#include "naxxramas.h"
+#include "def_naxxramas.h"
 
 enum
 {

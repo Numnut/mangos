@@ -47,6 +47,12 @@ include/sc_grid_searchers.cpp \
 include/sc_grid_searchers.h \
 include/sc_instance.cpp \
 include/sc_instance.h \
+scripts/serverscript/donationscript.cpp \
+scripts/serverscript/telestone.cpp \
+scripts/custom/custom_example.cpp \
+scripts/custom/custom_gossip_codebox.cpp \
+scripts/custom/test.cpp \
+scripts/custom/custom_tele.cpp \
 scripts/battlegrounds/battleground.cpp \
 scripts/eastern_kingdoms/alterac_mountains.cpp \
 scripts/eastern_kingdoms/arathi_highlands.cpp \
@@ -312,6 +318,9 @@ scripts/northrend/azjol-nerub/azjol-nerub/instance_azjol-nerub.cpp \
 scripts/northrend/draktharon_keep/boss_novos.cpp \
 scripts/northrend/draktharon_keep/boss_tharonja.cpp \
 scripts/northrend/draktharon_keep/boss_trollgore.cpp \
+scripts/northrend/crusaders_coliseum/trial_of_the_crusader/the_two_jormungar.cpp
+scripts/northrend/crusaders_coliseum/trial_of_the_crusader/gormok_the_crusader.cpp
+scripts/northrend/crusaders_coliseum/trial_of_the_crusader/instance_trial_of_the_crusader.cpp
 scripts/northrend/gundrak/boss_colossus.cpp \
 scripts/northrend/gundrak/boss_galdarah.cpp \
 scripts/northrend/gundrak/boss_moorabi.cpp \
